@@ -110,31 +110,66 @@ AppSettingsPage({
         }
       },
       [
-        // Header
+        // Stealth Apps Brand Signature Header
         View(
           {
             style: {
-              paddingBottom: '12px',
-              borderBottom: '1px solid #27272a'
+              padding: '16px 14px',
+              backgroundColor: '#130f1e',
+              border: '1px solid #3b2d54',
+              borderRadius: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
             }
           },
           [
+            View(
+              {
+                style: {
+                  display: 'flex',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }
+              },
+              [
+                Text({
+                  style: {
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    color: '#c084fc',
+                    letterSpacing: '0.16em',
+                    textTransform: 'uppercase'
+                  }
+                }, 'STEALTH APPS'),
+                Text({
+                  style: {
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    color: '#e9d5ff',
+                    backgroundColor: '#3b1d60',
+                    padding: '3px 8px',
+                    borderRadius: '6px'
+                  }
+                }, 'SIGNATURE')
+              ]
+            ),
             Text({
               style: {
-                fontSize: '18px',
+                fontSize: '17px',
                 fontWeight: '700',
-                color: '#10b981',
-                marginBottom: '4px',
-                lineHeight: '24px'
+                color: '#f8fafc',
+                lineHeight: '22px'
               }
-            }, 'Stealth Aurora Tracker'),
+            }, 'Aurora Tracker · Companion Settings'),
             Text({
               style: {
-                fontSize: '13px',
-                color: '#a1a1aa',
-                lineHeight: '18px'
+                fontSize: '12px',
+                color: '#94a3b8',
+                lineHeight: '16px'
               }
-            }, 'Search and manage observation locations synced to your Amazfit watch.')
+            }, 'Manage observation coordinates and customize synced presets for your Amazfit watch.')
           ]
         ),
 
@@ -143,8 +178,8 @@ AppSettingsPage({
           {
             title: 'PRIMARY TRACKING LOCATION',
             style: {
-              backgroundColor: '#18181b',
-              border: '1px solid #27272a',
+              backgroundColor: '#130f1e',
+              border: '1px solid #2d2242',
               borderRadius: '12px',
               padding: '14px'
             }
@@ -165,15 +200,15 @@ AppSettingsPage({
                     style: { fontSize: '15px', fontWeight: '600', color: '#f8fafc' }
                   }, 'Local GPS (Automatic)'),
                   Text({
-                    style: { fontSize: '12px', color: '#10b981', marginTop: '2px' }
+                    style: { fontSize: '12px', color: '#c084fc', marginTop: '2px' }
                   }, 'Always Active · High Precision NOAA Geomagnetic Model')
                 ]),
                 Text({
                   style: {
                     fontSize: '11px',
                     fontWeight: '700',
-                    color: '#06b6d4',
-                    backgroundColor: '#164e63',
+                    color: '#e9d5ff',
+                    backgroundColor: '#3b1d60',
                     padding: '4px 8px',
                     borderRadius: '6px'
                   }
@@ -188,15 +223,15 @@ AppSettingsPage({
           {
             title: 'SEARCH & ADD NEW LOCATION',
             style: {
-              backgroundColor: '#18181b',
-              border: '1px solid #27272a',
+              backgroundColor: '#130f1e',
+              border: '1px solid #2d2242',
               borderRadius: '12px',
               padding: '14px'
             }
           },
           [
             Text({
-              style: { fontSize: '12px', color: '#a1a1aa', marginBottom: '8px' }
+              style: { fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }
             }, 'Search any city worldwide (e.g. Tromso, Rovaniemi, Kiruna, Anchorage):'),
 
             TextInput({
@@ -214,7 +249,7 @@ AppSettingsPage({
                 fontSize: '13px',
                 fontWeight: '600',
                 color: '#ffffff',
-                backgroundColor: '#10b981',
+                backgroundColor: '#7c3aed',
                 padding: '10px 14px',
                 borderRadius: '8px',
                 border: 'none',
@@ -239,12 +274,12 @@ AppSettingsPage({
                   gap: '8px',
                   marginTop: '12px',
                   paddingTop: '10px',
-                  borderTop: '1px solid #27272a'
+                  borderTop: '1px solid #2d2242'
                 }
               },
               [
                 Text({
-                  style: { fontSize: '11px', fontWeight: '700', color: '#06b6d4', textTransform: 'uppercase' }
+                  style: { fontSize: '11px', fontWeight: '700', color: '#c084fc', textTransform: 'uppercase' }
                 }, 'SEARCH RESULTS'),
 
                 ...this.state.searchResults.map((result) => {
@@ -259,7 +294,7 @@ AppSettingsPage({
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '10px 12px',
-                        backgroundColor: '#27272a',
+                        backgroundColor: '#1c162b',
                         borderRadius: '8px'
                       }
                     },
@@ -278,8 +313,8 @@ AppSettingsPage({
                         style: {
                           fontSize: '11px',
                           fontWeight: '600',
-                          color: alreadySaved ? '#34d399' : (isMaxPresets ? '#71717a' : '#ffffff'),
-                          backgroundColor: alreadySaved ? '#064e3b' : (isMaxPresets ? '#18181b' : '#10b981'),
+                          color: alreadySaved ? '#d8b4fe' : (isMaxPresets ? '#71717a' : '#ffffff'),
+                          backgroundColor: alreadySaved ? '#3b1d60' : (isMaxPresets ? '#18181b' : '#7c3aed'),
                           padding: '6px 12px',
                           borderRadius: '6px',
                           border: 'none'
@@ -303,15 +338,15 @@ AppSettingsPage({
           {
             title: `SAVED PRESET LOCATIONS (${savedLocations.length}/5)`,
             style: {
-              backgroundColor: '#18181b',
-              border: '1px solid #27272a',
+              backgroundColor: '#130f1e',
+              border: '1px solid #2d2242',
               borderRadius: '12px',
               padding: '14px'
             }
           },
           [
             Text({
-              style: { fontSize: '12px', color: '#a1a1aa', marginBottom: '12px' }
+              style: { fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }
             }, 'Cycle through these presets on your watch by tapping the location pill at the bottom of Screen 0:'),
 
             View(
@@ -331,7 +366,7 @@ AppSettingsPage({
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '10px 12px',
-                      backgroundColor: '#27272a',
+                      backgroundColor: '#1c162b',
                       borderRadius: '8px'
                     }
                   },
@@ -373,15 +408,15 @@ AppSettingsPage({
           {
             title: 'POPULAR AURORA OBSERVATORIES',
             style: {
-              backgroundColor: '#18181b',
-              border: '1px solid #27272a',
+              backgroundColor: '#130f1e',
+              border: '1px solid #2d2242',
               borderRadius: '12px',
               padding: '14px'
             }
           },
           [
             Text({
-              style: { fontSize: '12px', color: '#a1a1aa', marginBottom: '10px' }
+              style: { fontSize: '12px', color: '#94a3b8', marginBottom: '10px' }
             }, 'Tap any global observatory to add instantly:'),
 
             View(
@@ -401,10 +436,10 @@ AppSettingsPage({
                     fontSize: '11px',
                     fontWeight: '600',
                     padding: '8px 10px',
-                    backgroundColor: alreadyAdded ? '#064e3b' : '#27272a',
-                    color: alreadyAdded ? '#34d399' : '#ffffff',
+                    backgroundColor: alreadyAdded ? '#3b1d60' : '#1c162b',
+                    color: alreadyAdded ? '#e9d5ff' : '#ffffff',
                     borderRadius: '8px',
-                    border: '1px solid #3f3f46'
+                    border: '1px solid #3b2d54'
                   },
                   onClick: () => {
                     if (alreadyAdded) return
@@ -422,8 +457,8 @@ AppSettingsPage({
         View(
           {
             style: {
-              backgroundColor: '#121215',
-              border: '1px solid #27272a',
+              backgroundColor: '#130f1e',
+              border: '1px solid #2d2242',
               borderRadius: '12px',
               padding: '12px',
               marginTop: '4px'
@@ -431,10 +466,10 @@ AppSettingsPage({
           },
           [
             Text({
-              style: { fontSize: '12px', fontWeight: '700', color: '#10b981', marginBottom: '2px' }
-            }, 'Automatic Watch Synchronization'),
+              style: { fontSize: '12px', fontWeight: '700', color: '#c084fc', marginBottom: '2px' }
+            }, 'Stealth Apps Precision Sync'),
             Text({
-              style: { fontSize: '11px', color: '#71717a', lineHeight: '16px' }
+              style: { fontSize: '11px', color: '#94a3b8', lineHeight: '16px' }
             }, 'Locations synchronize over Bluetooth Low Energy automatically when opening the watch app.')
           ]
         )

@@ -15,17 +15,22 @@ const ui =
 
 const SCREEN_SIZE = 466
 
-const COLOR_EMERALD = 0x10b981
-const COLOR_CYAN = 0x06b6d4
-const COLOR_SKY = 0x38bdf8
-const COLOR_TRACK = 0x1e293b
-const COLOR_WHITE = 0xf8fafc
-const COLOR_SUBTLE = 0x94a3b8
+// Stealth Apps Color Tokens (Minimalist Luxury AMOLED)
+const COLOR_OBSIDIAN = 0x000000        // Pure AMOLED black canvas
+const COLOR_TRACK = 0x241e38           // Subtle midnight-violet track
+const COLOR_TRACK_BTN = 0x19152b       // Obsidian velvet button surface
+const COLOR_PRESS_BTN = 0x2d244a       // Button active press surface
+const COLOR_ELECTRIC_PURPLE = 0xc084fc  // High probability >= 70% (Electric purple)
+const COLOR_ROYAL_VIOLET = 0x8b5cf6    // Moderate probability 40-69% (Royal violet)
+const COLOR_DEEP_VIOLET = 0x6366f1     // Low probability < 40% (Velvet deep indigo/violet)
+const COLOR_WHITE = 0xf8fafc           // Optical crisp white
+const COLOR_LILAC = 0xd8b4fe           // Soft lilac for secondary telemetry
+const COLOR_SUBTLE = 0x94a3b8          // Muted slate for titles / guides
 
 function getColorByProb(prob) {
-  if (prob >= 70) return COLOR_EMERALD
-  if (prob >= 40) return COLOR_CYAN
-  return COLOR_SKY
+  if (prob >= 70) return COLOR_ELECTRIC_PURPLE
+  if (prob >= 40) return COLOR_ROYAL_VIOLET
+  return COLOR_DEEP_VIOLET
 }
 
 const LOCATION_PRESETS = [
@@ -350,7 +355,7 @@ Page({
       w: 346,
       h: 24,
       text_size: 15,
-      color: COLOR_CYAN,
+      color: COLOR_LILAC,
       align_h: ui.align.CENTER_H,
       align_v: ui.align.CENTER_V,
       text: `KP ${now.kp.toFixed(1)}    ·    CLOUD ${now.clouds}%`
@@ -434,8 +439,8 @@ Page({
       w: 220,
       h: 36,
       radius: 18,
-      normal_color: COLOR_TRACK,
-      press_color: 0x334155,
+      normal_color: COLOR_TRACK_BTN,
+      press_color: COLOR_PRESS_BTN,
       text_size: 14,
       color: COLOR_WHITE,
       text: `${now.locationName || 'Local GPS'} ▾`,

@@ -112,10 +112,14 @@ async function fetchLiveAuroraData(location) {
       const swpcRes = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', { cache: 'no-store' })
       if (swpcRes.ok) {
         const swpcJson = await swpcRes.json()
-        if (Array.isArray(swpcJson) && swpcJson.length > 1) {
+        if (Array.isArray(swpcJson) && swpcJson.length > 0) {
           const lastEntry = swpcJson[swpcJson.length - 1]
-          if (lastEntry && lastEntry[1] !== undefined) {
-            currentKp = parseFloat(parseFloat(lastEntry[1]).toFixed(1))
+          if (lastEntry) {
+            if (lastEntry.Kp !== undefined && lastEntry.Kp !== null) {
+              currentKp = parseFloat(parseFloat(lastEntry.Kp).toFixed(1))
+            } else if (lastEntry[1] !== undefined) {
+              currentKp = parseFloat(parseFloat(lastEntry[1]).toFixed(1))
+            }
           }
         }
       }
@@ -207,13 +211,27 @@ AppSideService(
     getSavedLocations() {
       try {
         if (typeof settingsStorage !== 'undefined') {
+          let localGps = DEFAULT_PRESETS[0]
+          const storedGps = settingsStorage.getItem('localGpsCoords')
+          if (storedGps) {
+            const parsedGps = typeof storedGps === 'string' ? JSON.parse(storedGps) : storedGps
+            if (parsedGps && typeof parsedGps.lat === 'number' && typeof parsedGps.lon === 'number') {
+              localGps = {
+                name: parsedGps.name || 'Local GPS',
+                lat: parsedGps.lat,
+                lon: parsedGps.lon
+              }
+            }
+          }
+
           const stored = settingsStorage.getItem('customLocations')
           if (stored) {
             const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
             if (Array.isArray(parsed) && parsed.length > 0) {
-              return [DEFAULT_PRESETS[0], ...parsed.slice(0, 5)]
+              return [localGps, ...parsed.slice(0, 5)]
             }
           }
+          return [localGps, ...DEFAULT_PRESETS.slice(1)]
         }
       } catch (e) {}
       return DEFAULT_PRESETS

@@ -9,17 +9,21 @@ import '../shared/device-polyfill.js'
 const SCREEN_WIDTH = 466
 const CARD_HEIGHT = 180
 
-const COLOR_EMERALD = 0x10b981
-const COLOR_CYAN = 0x06b6d4
-const COLOR_SKY = 0x38bdf8
-const COLOR_TRACK = 0x1e293b
+// Stealth Apps Color Tokens (Minimalist Luxury AMOLED)
+const COLOR_OBSIDIAN = 0x000000
+const COLOR_TRACK = 0x241e38
+const COLOR_CARD_BG = 0x151122
+const COLOR_ELECTRIC_PURPLE = 0xc084fc
+const COLOR_ROYAL_VIOLET = 0x8b5cf6
+const COLOR_DEEP_VIOLET = 0x6366f1
 const COLOR_WHITE = 0xf8fafc
+const COLOR_LILAC = 0xd8b4fe
 const COLOR_SUBTLE = 0x94a3b8
 
 function getColorByProb(prob) {
-  if (prob >= 70) return COLOR_EMERALD
-  if (prob >= 40) return COLOR_CYAN
-  return COLOR_SKY
+  if (prob >= 70) return COLOR_ELECTRIC_PURPLE
+  if (prob >= 40) return COLOR_ROYAL_VIOLET
+  return COLOR_DEEP_VIOLET
 }
 
 SecondaryWidget({
@@ -70,7 +74,7 @@ SecondaryWidget({
       w: cardW,
       h: CARD_HEIGHT,
       radius: 20,
-      color: 0x0f172a
+      color: COLOR_CARD_BG
     })
 
     // 2. Probability Pill (Hero Left)
@@ -102,7 +106,7 @@ SecondaryWidget({
       y: startY + 28,
       w: cardW - 150,
       h: 26,
-      color: COLOR_CYAN,
+      color: COLOR_LILAC,
       text_size: 16,
       align_h: hmUI.align.LEFT,
       align_v: hmUI.align.CENTER_V,
