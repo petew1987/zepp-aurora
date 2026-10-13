@@ -1,7 +1,5 @@
 /**
  * Stealth Aurora Tracker - Watch Page UI
- * Target Device: Amazfit Active 3 (Round 466x466 AMOLED Screen)
- * Firmware: Zepp OS 2.x & 3.x
  */
 
 import '../shared/device-polyfill.js'
@@ -23,7 +21,6 @@ const COLOR_SKY = 0x38bdf8
 const COLOR_TRACK = 0x1e293b
 const COLOR_WHITE = 0xf8fafc
 const COLOR_SUBTLE = 0x94a3b8
-const COLOR_TRANSPARENT = 0x000000
 
 function getColorByProb(prob) {
   if (prob >= 70) return COLOR_EMERALD
@@ -31,48 +28,112 @@ function getColorByProb(prob) {
   return COLOR_SKY
 }
 
+const LOCATION_PRESETS = [
+  { name: 'Local GPS', lat: 69.65, lon: 18.96, baseClouds: 18, baseKp: 4.5 },
+  { name: 'Tromso', lat: 69.65, lon: 18.96, baseClouds: 20, baseKp: 4.8 },
+  { name: 'Fairbanks', lat: 64.84, lon: -147.72, baseClouds: 35, baseKp: 5.2 },
+  { name: 'Reykjavik', lat: 64.14, lon: -21.94, baseClouds: 65, baseKp: 4.2 },
+  { name: 'Yellowknife', lat: 62.45, lon: -114.37, baseClouds: 12, baseKp: 5.5 },
+  { name: 'Abisko', lat: 68.35, lon: 18.82, baseClouds: 22, baseKp: 4.9 },
+  { name: 'Rovaniemi', lat: 66.50, lon: 25.72, baseClouds: 40, baseKp: 4.6 },
+  { name: 'Kiruna', lat: 67.85, lon: 20.22, baseClouds: 25, baseKp: 4.8 },
+  { name: 'Anchorage', lat: 61.21, lon: -149.90, baseClouds: 50, baseKp: 4.0 }
+]
+
+function calcProbability(kp, clouds, lat) {
+  const absLat = Math.abs(lat)
+  let reqKp = Math.max(0.5, (67.5 - absLat) * 0.7 + 1.0)
+  if (absLat >= 66) reqKp = 1.0
+
+  let rawProb = 10
+  if (kp >= reqKp) {
+    rawProb = Math.min(98, 40 + (kp - reqKp) * 22)
+  } else {
+    rawProb = Math.max(5, 40 - (reqKp - kp) * 18)
+  }
+
+  const cloudFactor = 1 - (clouds / 100) * 0.85
+  return Math.max(0, Math.min(99, Math.round(rawProb * Math.max(0.08, cloudFactor))))
+}
+
+function getActivityStatus(prob) {
+  if (prob >= 70) return 'HIGH ACTIVITY'
+  if (prob >= 40) return 'MODERATE ACTIVITY'
+  return 'LOW ACTIVITY'
+}
+
+function formatHour(h) {
+  const modH = ((h % 24) + 24) % 24
+  return modH < 10 ? '0' + modH : '' + modH
+}
+
+function buildLocationForecast(locationName) {
+  const loc = LOCATION_PRESETS.find(p => p.name === locationName || locationName.startsWith(p.name)) || LOCATION_PRESETS[0]
+  const now = new Date()
+  const currentH = now.getHours()
+  const currentKp = loc.baseKp
+  const currentClouds = loc.baseClouds
+  const currentProb = calcProbability(currentKp, currentClouds, loc.lat)
+
+  const sixHour = []
+  for (let i = 0; i < 6; i++) {
+    const h = (currentH + i) % 24
+    const kp = parseFloat(Math.max(1.0, Math.min(8.5, currentKp + Math.sin(i / 1.5) * 0.5)).toFixed(1))
+    const clouds = Math.max(0, Math.min(100, Math.round(currentClouds + Math.sin(i) * 10)))
+    const prob = calcProbability(kp, clouds, loc.lat)
+    sixHour.push({ time: formatHour(h), prob, kp, clouds })
+  }
+
+  const twelveHour = []
+  for (let step = 1; step <= 6; step++) {
+    const offset = step * 2
+    const h = (currentH + offset) % 24
+    const kp = parseFloat(Math.max(1.0, Math.min(8.5, currentKp + Math.cos(step) * 0.7)).toFixed(1))
+    const clouds = Math.max(0, Math.min(100, Math.round(currentClouds + Math.cos(step / 2) * 15)))
+    const prob = calcProbability(kp, clouds, loc.lat)
+    twelveHour.push({ time: formatHour(h), prob, kp, clouds })
+  }
+
+  const twentyFourHour = []
+  const offsets = [14, 16, 18, 20, 22, 24]
+  for (let i = 0; i < offsets.length; i++) {
+    const offset = offsets[i]
+    const h = (currentH + offset) % 24
+    const kp = parseFloat(Math.max(1.0, Math.min(8.5, currentKp + Math.sin(i) * 0.8)).toFixed(1))
+    const clouds = Math.max(0, Math.min(100, Math.round(currentClouds + Math.sin(offset / 3) * 20)))
+    const prob = calcProbability(kp, clouds, loc.lat)
+    twentyFourHour.push({ time: formatHour(h), prob, kp, clouds })
+  }
+
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+  const sevenDay = []
+  for (let d = 1; d <= 7; d++) {
+    const future = new Date(now.getTime() + d * 86400000)
+    const day = dayNames[future.getDay()]
+    const kp = parseFloat(Math.max(1.5, Math.min(7.5, currentKp + Math.sin(d * 1.3) * 1.1)).toFixed(1))
+    const clouds = Math.max(5, Math.min(95, Math.round(currentClouds + Math.cos(d) * 22)))
+    const prob = calcProbability(kp, clouds, loc.lat)
+    sevenDay.push({ day, prob, kp, clouds })
+  }
+
+  return {
+    now: {
+      time: formatHour(currentH),
+      prob: currentProb,
+      kp: currentKp,
+      clouds: currentClouds,
+      status: getActivityStatus(currentProb),
+      locationName: loc.name
+    },
+    sixHour,
+    twelveHour,
+    twentyFourHour,
+    sevenDay
+  }
+}
+
 const DEFAULT_AURORA_DATA = {
-  now: {
-    time: '12',
-    prob: 78,
-    kp: 4.5,
-    clouds: 18,
-    status: 'HIGH ACTIVITY',
-    locationName: 'Local GPS'
-  },
-  sixHour: [
-    { time: '12', prob: 84, kp: 5.1, clouds: 18 },
-    { time: '13', prob: 79, kp: 4.9, clouds: 20 },
-    { time: '14', prob: 74, kp: 4.6, clouds: 25 },
-    { time: '15', prob: 66, kp: 4.3, clouds: 32 },
-    { time: '16', prob: 52, kp: 3.9, clouds: 45 },
-    { time: '17', prob: 38, kp: 3.4, clouds: 58 }
-  ],
-  twelveHour: [
-    { time: '02', prob: 84, kp: 5.1, clouds: 18 },
-    { time: '04', prob: 76, kp: 4.8, clouds: 22 },
-    { time: '06', prob: 68, kp: 4.5, clouds: 30 },
-    { time: '08', prob: 55, kp: 4.1, clouds: 42 },
-    { time: '10', prob: 42, kp: 3.7, clouds: 50 },
-    { time: '12', prob: 30, kp: 3.2, clouds: 60 }
-  ],
-  twentyFourHour: [
-    { time: '14', prob: 35, kp: 3.3, clouds: 55 },
-    { time: '16', prob: 48, kp: 3.8, clouds: 42 },
-    { time: '18', prob: 62, kp: 4.4, clouds: 30 },
-    { time: '20', prob: 75, kp: 4.9, clouds: 22 },
-    { time: '22', prob: 82, kp: 5.2, clouds: 16 },
-    { time: '24', prob: 78, kp: 5.0, clouds: 20 }
-  ],
-  sevenDay: [
-    { day: 'MON', prob: 82, kp: 5.2, clouds: 15 },
-    { day: 'TUE', prob: 75, kp: 4.8, clouds: 20 },
-    { day: 'WED', prob: 68, kp: 4.5, clouds: 30 },
-    { day: 'THU', prob: 58, kp: 4.1, clouds: 38 },
-    { day: 'FRI', prob: 45, kp: 3.7, clouds: 50 },
-    { day: 'SAT', prob: 38, kp: 3.4, clouds: 55 },
-    { day: 'SUN', prob: 48, kp: 3.9, clouds: 40 }
-  ],
+  ...buildLocationForecast('Local GPS'),
   locations: ['Local GPS', 'Tromso', 'Fairbanks', 'Reykjavik', 'Yellowknife', 'Abisko'],
   activeLocationIndex: 0
 }
@@ -98,14 +159,18 @@ Page({
     this.registerGestures()
     this.renderViewFrame()
     this.renderScreen(this.state.currentScreen)
-    this.renderEdgeNavigation()
   },
 
   fetchDataFromCompanion(cycle = false) {
     try {
       if (typeof this.request === 'function') {
         const reqType = cycle ? 'CYCLE_LOCATION' : 'GET_AURORA_DATA'
-        this.request({ type: reqType })
+        const reqPayload = {
+          type: reqType,
+          locationIndex: this.state.auroraData.activeLocationIndex
+        }
+
+        this.request(reqPayload)
           .then(res => {
             if (res && res.data) {
               this.state.auroraData = res.data
@@ -118,14 +183,19 @@ Page({
   },
 
   cycleLocation() {
-    const locs = this.state.auroraData.locations || []
-    if (locs.length > 0) {
-      const nextIdx = (this.state.auroraData.activeLocationIndex + 1) % locs.length
-      this.state.auroraData.activeLocationIndex = nextIdx
-      this.state.auroraData.now.locationName = locs[nextIdx]
+    const locs = this.state.auroraData.locations || LOCATION_PRESETS.map(p => p.name)
+    const nextIdx = (this.state.auroraData.activeLocationIndex + 1) % locs.length
+    const nextName = locs[nextIdx]
+
+    const freshForecast = buildLocationForecast(nextName)
+    this.state.auroraData = {
+      ...freshForecast,
+      locations: locs,
+      activeLocationIndex: nextIdx
     }
-    this.fetchDataFromCompanion(true)
+
     this.refreshActiveScreen()
+    this.fetchDataFromCompanion(true)
   },
 
   registerGestures() {
@@ -189,34 +259,34 @@ Page({
   renderViewFrame() {
     const peakProb = this.getScreenPeakProbability(this.state.currentScreen)
     const arcColor = getColorByProb(peakProb)
-    const endAngle = -90 + Math.round((peakProb / 100) * 360)
+    const endAngle = 180 + Math.round((peakProb / 100) * 180)
 
     this.widgets.frameBgArc = ui.createWidget(ui.widget.ARC, {
-      x: 1,
-      y: 1,
-      w: 464,
-      h: 464,
-      start_angle: 0,
+      x: 8,
+      y: 8,
+      w: 450,
+      h: 450,
+      start_angle: 180,
       end_angle: 360,
-      line_width: 6,
+      line_width: 14,
       color: COLOR_TRACK
     })
 
     this.widgets.frameProbArc = ui.createWidget(ui.widget.ARC, {
-      x: 1,
-      y: 1,
-      w: 464,
-      h: 464,
-      start_angle: -90,
+      x: 8,
+      y: 8,
+      w: 450,
+      h: 450,
+      start_angle: 180,
       end_angle: endAngle,
-      line_width: 6,
+      line_width: 14,
       color: arcColor
     })
 
     const titles = ['NOW', '12H OUTLOOK', '24H (13-24H)', '7-DAY OUTLOOK']
     this.widgets.frameTitle = ui.createWidget(ui.widget.TEXT, {
       x: 60,
-      y: 14,
+      y: 18,
       w: 346,
       h: 22,
       text_size: 13,
@@ -230,11 +300,12 @@ Page({
   updateViewFrame() {
     const peakProb = this.getScreenPeakProbability(this.state.currentScreen)
     const arcColor = getColorByProb(peakProb)
-    const endAngle = -90 + Math.round((peakProb / 100) * 360)
+    const endAngle = 180 + Math.round((peakProb / 100) * 180)
     const titles = ['NOW', '12H OUTLOOK', '24H (13-24H)', '7-DAY OUTLOOK']
 
     if (this.widgets.frameProbArc) {
       this.widgets.frameProbArc.setProperty(ui.prop.MORE, {
+        start_angle: 180,
         end_angle: endAngle,
         color: arcColor
       })
@@ -275,7 +346,7 @@ Page({
 
     const upperMetrics = ui.createWidget(ui.widget.TEXT, {
       x: 60,
-      y: 40,
+      y: 56,
       w: 346,
       h: 24,
       text_size: 15,
@@ -288,10 +359,10 @@ Page({
 
     const heroProb = ui.createWidget(ui.widget.TEXT, {
       x: 60,
-      y: 64,
+      y: 82,
       w: 346,
-      h: 46,
-      text_size: 38,
+      h: 50,
+      text_size: 42,
       color: getColorByProb(now.prob),
       align_h: ui.align.CENTER_H,
       align_v: ui.align.CENTER_V,
@@ -301,10 +372,10 @@ Page({
 
     const actStatus = ui.createWidget(ui.widget.TEXT, {
       x: 60,
-      y: 110,
+      y: 134,
       w: 346,
-      h: 20,
-      text_size: 12,
+      h: 22,
+      text_size: 13,
       color: COLOR_WHITE,
       align_h: ui.align.CENTER_H,
       align_v: ui.align.CENTER_V,
@@ -312,125 +383,15 @@ Page({
     })
     this.widgets.contentWidgets.push(actStatus)
 
-    const locBtn = ui.createWidget(ui.widget.BUTTON, {
-      x: 133,
-      y: 132,
-      w: 200,
-      h: 28,
-      radius: 14,
-      normal_color: COLOR_TRACK,
-      press_color: 0x334155,
-      text_size: 12,
-      color: COLOR_WHITE,
-      text: `${now.locationName || 'Local GPS'} ▾`,
-      click_func: () => {
-        this.cycleLocation()
-      }
-    })
-    this.widgets.contentWidgets.push(locBtn)
-
-    const header = ui.createWidget(ui.widget.TEXT, {
-      x: 60,
-      y: 164,
-      w: 346,
-      h: 18,
-      text_size: 11,
-      color: COLOR_CYAN,
-      align_h: ui.align.CENTER_H,
-      align_v: ui.align.CENTER_V,
-      text: '6-HOUR FORECAST'
-    })
-    this.widgets.contentWidgets.push(header)
-
-    const startX = 77
-    const colW = 44
-    const gap = 8
-    const barW = 12
-    const barTop = 186
-    const maxBarH = 46
+    const startX = 69
+    const barW = 54
+    const gap = 1
+    const barTop = 168
+    const maxBarH = 50
 
     for (let i = 0; i < 6; i++) {
       const item = sixHour[i] || { time: '00', prob: 0, kp: 0.0, clouds: 0 }
-      const colX = startX + i * (colW + gap)
-      const barX = colX + Math.round((colW - barW) / 2)
-      const fillH = Math.max(3, Math.round((item.prob / 100) * maxBarH))
-      const colColor = getColorByProb(item.prob)
-
-      const track = ui.createWidget(ui.widget.FILL_RECT, {
-        x: barX,
-        y: barTop,
-        w: barW,
-        h: maxBarH,
-        color: COLOR_TRACK,
-        radius: 3
-      })
-      this.widgets.contentWidgets.push(track)
-
-      const fill = ui.createWidget(ui.widget.FILL_RECT, {
-        x: barX,
-        y: barTop + (maxBarH - fillH),
-        w: barW,
-        h: fillH,
-        color: colColor,
-        radius: 3
-      })
-      this.widgets.contentWidgets.push(fill)
-
-      const label = ui.createWidget(ui.widget.TEXT, {
-        x: colX,
-        y: 236,
-        w: colW,
-        h: 120,
-        text_size: 12,
-        color: COLOR_WHITE,
-        align_h: ui.align.CENTER_H,
-        text: `${item.time}\n${item.prob}%\n${item.kp.toFixed(1)}\n${item.clouds}%`
-      })
-      this.widgets.contentWidgets.push(label)
-    }
-  },
-
-  renderScreen1() {
-    const data = this.state.auroraData
-    const twelveHour = data.twelveHour || DEFAULT_AURORA_DATA.twelveHour
-
-    const title = ui.createWidget(ui.widget.TEXT, {
-      x: 60,
-      y: 40,
-      w: 346,
-      h: 24,
-      text_size: 15,
-      color: COLOR_CYAN,
-      align_h: ui.align.CENTER_H,
-      align_v: ui.align.CENTER_V,
-      text: '12-HOUR OUTLOOK'
-    })
-    this.widgets.contentWidgets.push(title)
-
-    const guide = ui.createWidget(ui.widget.TEXT, {
-      x: 60,
-      y: 64,
-      w: 346,
-      h: 18,
-      text_size: 11,
-      color: COLOR_SUBTLE,
-      align_h: ui.align.CENTER_H,
-      align_v: ui.align.CENTER_V,
-      text: 'TIME · PROB · KP · CLOUD'
-    })
-    this.widgets.contentWidgets.push(guide)
-
-    const startX = 77
-    const colW = 44
-    const gap = 8
-    const barW = 14
-    const barTop = 92
-    const maxBarH = 76
-
-    for (let i = 0; i < 6; i++) {
-      const item = twelveHour[i] || { time: '00', prob: 0, kp: 0.0, clouds: 0 }
-      const colX = startX + i * (colW + gap)
-      const barX = colX + Math.round((colW - barW) / 2)
+      const barX = startX + i * (barW + gap)
       const fillH = Math.max(4, Math.round((item.prob / 100) * maxBarH))
       const colColor = getColorByProb(item.prob)
 
@@ -440,7 +401,7 @@ Page({
         w: barW,
         h: maxBarH,
         color: COLOR_TRACK,
-        radius: 3
+        radius: 2
       })
       this.widgets.contentWidgets.push(track)
 
@@ -450,16 +411,96 @@ Page({
         w: barW,
         h: fillH,
         color: colColor,
-        radius: 3
+        radius: 2
       })
       this.widgets.contentWidgets.push(fill)
 
       const label = ui.createWidget(ui.widget.TEXT, {
-        x: colX,
-        y: 174,
-        w: colW,
-        h: 140,
-        text_size: 13,
+        x: barX,
+        y: 224,
+        w: barW,
+        h: 130,
+        text_size: 14,
+        color: COLOR_WHITE,
+        align_h: ui.align.CENTER_H,
+        text: `${item.time}\n${item.prob}%\n${item.kp.toFixed(1)}\n${item.clouds}%`
+      })
+      this.widgets.contentWidgets.push(label)
+    }
+
+    const locBtn = ui.createWidget(ui.widget.BUTTON, {
+      x: 123,
+      y: 372,
+      w: 220,
+      h: 36,
+      radius: 18,
+      normal_color: COLOR_TRACK,
+      press_color: 0x334155,
+      text_size: 14,
+      color: COLOR_WHITE,
+      text: `${now.locationName || 'Local GPS'} ▾`,
+      click_func: () => {
+        this.cycleLocation()
+      }
+    })
+    this.widgets.contentWidgets.push(locBtn)
+  },
+
+  renderScreen1() {
+    const data = this.state.auroraData
+    const twelveHour = data.twelveHour || DEFAULT_AURORA_DATA.twelveHour
+
+    const guide = ui.createWidget(ui.widget.TEXT, {
+      x: 60,
+      y: 64,
+      w: 346,
+      h: 22,
+      text_size: 13,
+      color: COLOR_SUBTLE,
+      align_h: ui.align.CENTER_H,
+      align_v: ui.align.CENTER_V,
+      text: 'TIME · PROB · KP · CLOUD'
+    })
+    this.widgets.contentWidgets.push(guide)
+
+    const startX = 69
+    const barW = 54
+    const gap = 1
+    const barTop = 104
+    const maxBarH = 92
+
+    for (let i = 0; i < 6; i++) {
+      const item = twelveHour[i] || { time: '00', prob: 0, kp: 0.0, clouds: 0 }
+      const barX = startX + i * (barW + gap)
+      const fillH = Math.max(5, Math.round((item.prob / 100) * maxBarH))
+      const colColor = getColorByProb(item.prob)
+
+      const track = ui.createWidget(ui.widget.FILL_RECT, {
+        x: barX,
+        y: barTop,
+        w: barW,
+        h: maxBarH,
+        color: COLOR_TRACK,
+        radius: 2
+      })
+      this.widgets.contentWidgets.push(track)
+
+      const fill = ui.createWidget(ui.widget.FILL_RECT, {
+        x: barX,
+        y: barTop + (maxBarH - fillH),
+        w: barW,
+        h: fillH,
+        color: colColor,
+        radius: 2
+      })
+      this.widgets.contentWidgets.push(fill)
+
+      const label = ui.createWidget(ui.widget.TEXT, {
+        x: barX,
+        y: 206,
+        w: barW,
+        h: 146,
+        text_size: 15,
         color: COLOR_WHITE,
         align_h: ui.align.CENTER_H,
         text: `${item.time}\n${item.prob}%\n${item.kp.toFixed(1)}\n${item.clouds}%`
@@ -472,25 +513,12 @@ Page({
     const data = this.state.auroraData
     const twentyFourHour = data.twentyFourHour || DEFAULT_AURORA_DATA.twentyFourHour
 
-    const title = ui.createWidget(ui.widget.TEXT, {
-      x: 60,
-      y: 40,
-      w: 346,
-      h: 24,
-      text_size: 15,
-      color: COLOR_CYAN,
-      align_h: ui.align.CENTER_H,
-      align_v: ui.align.CENTER_V,
-      text: '24-HOUR (HOURS 13 - 24)'
-    })
-    this.widgets.contentWidgets.push(title)
-
     const guide = ui.createWidget(ui.widget.TEXT, {
       x: 60,
       y: 64,
       w: 346,
-      h: 18,
-      text_size: 11,
+      h: 22,
+      text_size: 13,
       color: COLOR_SUBTLE,
       align_h: ui.align.CENTER_H,
       align_v: ui.align.CENTER_V,
@@ -498,18 +526,16 @@ Page({
     })
     this.widgets.contentWidgets.push(guide)
 
-    const startX = 77
-    const colW = 44
-    const gap = 8
-    const barW = 14
-    const barTop = 92
-    const maxBarH = 76
+    const startX = 69
+    const barW = 54
+    const gap = 1
+    const barTop = 104
+    const maxBarH = 92
 
     for (let i = 0; i < 6; i++) {
       const item = twentyFourHour[i] || { time: '00', prob: 0, kp: 0.0, clouds: 0 }
-      const colX = startX + i * (colW + gap)
-      const barX = colX + Math.round((colW - barW) / 2)
-      const fillH = Math.max(4, Math.round((item.prob / 100) * maxBarH))
+      const barX = startX + i * (barW + gap)
+      const fillH = Math.max(5, Math.round((item.prob / 100) * maxBarH))
       const colColor = getColorByProb(item.prob)
 
       const track = ui.createWidget(ui.widget.FILL_RECT, {
@@ -518,7 +544,7 @@ Page({
         w: barW,
         h: maxBarH,
         color: COLOR_TRACK,
-        radius: 3
+        radius: 2
       })
       this.widgets.contentWidgets.push(track)
 
@@ -528,16 +554,16 @@ Page({
         w: barW,
         h: fillH,
         color: colColor,
-        radius: 3
+        radius: 2
       })
       this.widgets.contentWidgets.push(fill)
 
       const label = ui.createWidget(ui.widget.TEXT, {
-        x: colX,
-        y: 174,
-        w: colW,
-        h: 140,
-        text_size: 13,
+        x: barX,
+        y: 206,
+        w: barW,
+        h: 146,
+        text_size: 15,
         color: COLOR_WHITE,
         align_h: ui.align.CENTER_H,
         text: `${item.time}\n${item.prob}%\n${item.kp.toFixed(1)}\n${item.clouds}%`
@@ -550,25 +576,12 @@ Page({
     const data = this.state.auroraData
     const sevenDay = data.sevenDay || DEFAULT_AURORA_DATA.sevenDay
 
-    const title = ui.createWidget(ui.widget.TEXT, {
-      x: 60,
-      y: 40,
-      w: 346,
-      h: 24,
-      text_size: 15,
-      color: COLOR_CYAN,
-      align_h: ui.align.CENTER_H,
-      align_v: ui.align.CENTER_V,
-      text: '7-DAY OUTLOOK'
-    })
-    this.widgets.contentWidgets.push(title)
-
     const guide = ui.createWidget(ui.widget.TEXT, {
       x: 60,
       y: 64,
       w: 346,
-      h: 18,
-      text_size: 11,
+      h: 22,
+      text_size: 13,
       color: COLOR_SUBTLE,
       align_h: ui.align.CENTER_H,
       align_v: ui.align.CENTER_V,
@@ -576,18 +589,16 @@ Page({
     })
     this.widgets.contentWidgets.push(guide)
 
-    const startX = 82
-    const colW = 38
-    const gap = 6
-    const barW = 12
-    const barTop = 92
-    const maxBarH = 76
+    const startX = 69
+    const barW = 46
+    const gap = 1
+    const barTop = 104
+    const maxBarH = 92
 
     for (let i = 0; i < 7; i++) {
       const item = sevenDay[i] || { day: 'DAY', prob: 0, kp: 0.0, clouds: 0 }
-      const colX = startX + i * (colW + gap)
-      const barX = colX + Math.round((colW - barW) / 2)
-      const fillH = Math.max(4, Math.round((item.prob / 100) * maxBarH))
+      const barX = startX + i * (barW + gap)
+      const fillH = Math.max(5, Math.round((item.prob / 100) * maxBarH))
       const colColor = getColorByProb(item.prob)
 
       const track = ui.createWidget(ui.widget.FILL_RECT, {
@@ -596,7 +607,7 @@ Page({
         w: barW,
         h: maxBarH,
         color: COLOR_TRACK,
-        radius: 3
+        radius: 2
       })
       this.widgets.contentWidgets.push(track)
 
@@ -606,48 +617,22 @@ Page({
         w: barW,
         h: fillH,
         color: colColor,
-        radius: 3
+        radius: 2
       })
       this.widgets.contentWidgets.push(fill)
 
       const label = ui.createWidget(ui.widget.TEXT, {
-        x: colX,
-        y: 174,
-        w: colW,
-        h: 140,
-        text_size: 12,
+        x: barX,
+        y: 206,
+        w: barW,
+        h: 146,
+        text_size: 14,
         color: COLOR_WHITE,
         align_h: ui.align.CENTER_H,
         text: `${item.day}\n${item.prob}%\n${item.kp.toFixed(1)}\n${item.clouds}%`
       })
       this.widgets.contentWidgets.push(label)
     }
-  },
-
-  renderEdgeNavigation() {
-    ui.createWidget(ui.widget.BUTTON, {
-      x: 0,
-      y: 100,
-      w: 64,
-      h: 266,
-      normal_color: COLOR_TRANSPARENT,
-      press_color: 0x0f172a,
-      click_func: () => {
-        this.prevScreen()
-      }
-    })
-
-    ui.createWidget(ui.widget.BUTTON, {
-      x: 402,
-      y: 100,
-      w: 64,
-      h: 266,
-      normal_color: COLOR_TRANSPARENT,
-      press_color: 0x0f172a,
-      click_func: () => {
-        this.nextScreen()
-      }
-    })
   },
 
   onDestroy() {

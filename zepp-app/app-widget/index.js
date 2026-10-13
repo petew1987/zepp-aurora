@@ -57,27 +57,27 @@ AppWidget({
 
     const prob = this.state.prob
     const arcColor = getColorByProb(prob)
-    const endAngle = -90 + Math.round((prob / 100) * 360)
+    const endAngle = 180 + Math.round((prob / 100) * 180)
 
     this.widgets.bgArc = hmUI.createWidget(hmUI.widget.ARC, {
-      x: 10,
-      y: 10,
-      w: 446,
-      h: 446,
-      start_angle: 0,
+      x: 8,
+      y: 8,
+      w: 450,
+      h: 450,
+      start_angle: 180,
       end_angle: 360,
-      line_width: 8,
+      line_width: 14,
       color: COLOR_TRACK
     })
 
     this.widgets.probArc = hmUI.createWidget(hmUI.widget.ARC, {
-      x: 10,
-      y: 10,
-      w: 446,
-      h: 446,
-      start_angle: -90,
+      x: 8,
+      y: 8,
+      w: 450,
+      h: 450,
+      start_angle: 180,
       end_angle: endAngle,
-      line_width: 8,
+      line_width: 14,
       color: arcColor
     })
 
