@@ -1,0 +1,69 @@
+name: Build & Release Zepp OS App
+
+# NOTE: If you rename or fork this repository, ensure your GitHub repository settings:
+# 1. Repository Visibility: Must be PUBLIC (so Zepp App can download the release without login).
+# 2. Workflow Permissions: Go to Repo Settings -> Actions -> General -> Workflow permissions -> Select "Read and write permissions".
+
+on:
+  workflow_dispatch: # Allows manual trigger from Actions tab in browser
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ZeppHello Package by Stealth Apps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install || npm install --legacy-peer-deps
+
+      - name: Install Zeus CLI
+        run: npm install -g @zeppos/zeus-cli
+
+      - name: Build Zepp OS Package (.zab and .zpk)
+        run: |
+          node scripts/build-package.js
+          ls -lh dist/
+
+      - name: Generate QR Code & Job Summary
+        run: |
+          node scripts/generate-qr.js
+
+      - name: Upload Build Artifacts (.zab, .zpk, and QR codes)
+        uses: actions/upload-artifact@v4
+        with:
+          name: zepphello-packages
+          path: |
+            dist/*.zab
+            dist/*.zpk
+            dist/*.png
+
+      - name: Create or Update GitHub Release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "ZeppHello v1.0.0 by Stealth Apps"
+          body: |
+            ## ⌚ ZeppHello — Zepp OS Template by Stealth Apps
+            
+            Install via Zepp App Developer Mode by scanning the QR code in the Action Run Summary or downloading the `.zpk` / `.zab` package below.
+          files: |
+            dist/zepphello.zpk
+            dist/zepphello.zab
+            dist/install-qrcode.png
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

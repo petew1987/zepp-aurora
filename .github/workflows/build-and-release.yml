@@ -1,0 +1,71 @@
+name: Build Zepp OS Package and Generate QR Code
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm ci || npm install
+          npm install -g qrcode
+
+      - name: Compile Zepp OS Mini-App
+        run: |
+          node scripts/build-package.js
+
+      - name: Generate Installation QR Codes
+        run: |
+          mkdir -p public/qr
+          # Direct GitHub raw release download URL
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/latest/download/aurora.zab"
+          
+          # Generate PNG QR Code
+          qrcode -o public/qr/install-qr.png "$DOWNLOAD_URL" -w 500 --color.dark '#000000' --color.light '#ffffff'
+          
+          # Generate ASCII terminal QR code in logs for instant mobile camera scan from Actions tab!
+          echo "==================== SCAN IN ZEPP APP ===================="
+          qrcode "$DOWNLOAD_URL" -s 2
+          echo "=========================================================="
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "Stealth Aurora Tracker (Latest Preview Build)"
+          body: |
+            ### Stealth Aurora Tracker for Amazfit Active 3 / Zepp OS
+            - **Compatible Devices:** Amazfit Active 3 Premium, Amazfit Active (Round 466x466 & Square 390x450), Balance, Cheetah.
+            - **Firmware:** Zepp OS 2.x & 3.x (Firmware 6.x.x.x+).
+            - **Installation:**
+              1. Open Zepp App on your smartphone.
+              2. Go to **Profile** > **Settings** > **About** and tap the Zepp icon 7 times to enable **Developer Mode**.
+              3. Go to **Profile** > **[Your Watch]** > **Developer Mode**.
+              4. Tap the **[+]** scan icon in the top right corner and scan the QR code below:
+              ![Install QR](https://github.com/${{ github.repository }}/raw/main/public/qr/install-qr.png)
+          files: |
+            dist/aurora.zab
+            dist/*.zpk
+            public/qr/install-qr.png
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

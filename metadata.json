@@ -1,0 +1,10 @@
+{
+  "name": "ZeppHello - Zepp OS Amazfit Template & App Builder",
+  "description": "Zepp OS 3.0 / 2.x Mini-App template by Stealth Apps for Amazfit smartwatches featuring interactive Hello message, customizable color settings, companion app side, widgets, and GitHub QR code installer generator for developer mode on Zepp App.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
